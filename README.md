@@ -38,3 +38,13 @@ For a safe baseline, create a throwaway teaching branch with one control tempora
 ### Design boundaries
 
 No real funds, bank integration, public registration, MFA, password recovery, webhook, KYC, fraud engine, deployment hardening, or backup/restore verification. SQLite is suitable for a local classroom demo; a multi-user deployment should use a shared server/database and test concurrency and operational recovery separately. Audit rows are attributable but not tamper-proof against a database administrator. The idempotency token prevents repeated submitted requests but does not prove human intent.
+
+## New account and risk workflow
+
+Customers can sign up with a zero balance, look up a registered email and confirm a beneficiary, remove their own beneficiaries, hide the on-screen balance, view a paginated statement, and open owner-scoped receipts. Seeded users are not automatically beneficiaries. There is no customer top-up flow; seed balances are demonstration funds.
+
+Transfers over PKR 50,000, to a beneficiary less than 24 hours old, or from a device without an established trust signal are recorded as **pending** and move no funds. Pending request IDs cannot later be replayed into a completed transfer. **FIDO2 registration/assertion verification, device enrollment, and a separate risk reviewer are not implemented.** There is deliberately no endpoint that approves these requests. The current application does not establish a trusted device in normal operation, so all normal UI transfers are held. This is a fail-closed partial implementation, not a completed banking workflow. The `trusted_device` session flag used by unit tests is a test fixture, not a user-facing trust mechanism. Do not turn it on without verified device enrollment and revocation.
+
+Lecture 2 defense layers: identity (password hashing, throttling, sessions; FIDO2 outstanding); application/API (CSRF, ownership, validation, idempotency); data (integer paisa, atomic debit/credit, scoped reads); infrastructure (loopback demo; HTTPS and secret management required for remote use); monitoring (audit events and pending risk records; external alerting outstanding); recovery (database rollback on failed transfers; backups and restore drills outstanding). A session cookie is preferable to JWT in this server-rendered app: JWT does not itself add security and would require safe token storage, expiry, revocation, and scope enforcement.
+
+For Burp, test ownership by changing beneficiary and receipt IDs, tamper with `sender_id` and amount, replay the same request ID, and verify the pending risk row and unchanged balances. For packet capture, use a separate HTTPS deployment; the loopback HTTP demo is **not encrypted**. A desktop wrapper does not supply transport encryption.
